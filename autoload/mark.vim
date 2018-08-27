@@ -8,13 +8,113 @@
 " Maintainer:  Ingo Karkat <ingo@karkat.de>
 "
 " DEPENDENCIES:
-"   - ingo/cmdargs/pattern.vim autoload script
-"   - ingo/err.vim autoload script
-"   - ingo/msg.vim autoload script
-"   - ingo/regexp/split.vim autoload script
-"   - SearchSpecial.vim autoload script (optional, for improved search messages).
 "
 " Version:     3.0.1
+
+function! mark#HighlightMsg( text, ... )
+    execute 'echohl' (a:0 ? a:1 : 'None')
+    echomsg a:text
+    echohl None
+endfunction
+function! mark#WarningMsg( text )
+    let v:warningmsg = a:text
+    call mark#HighlightMsg(v:warningmsg, 'WarningMsg')
+endfunction
+function! mark#ErrorMsg( text, ... )
+    let v:errmsg = a:text
+    call mark#HighlightMsg(v:errmsg, 'ErrorMsg')
+    if a:0 && a:1
+	execute "normal! \<C-\>\<C-n>\<Esc>" | " Beep.
+    endif
+endfunction
+function! mark#MsgFromVimException()
+    " v:exception contains what is normally in v:errmsg, but with extra
+    " exception source info prepended, which we cut away.
+    return substitute(v:exception, '^\CVim\%((\a\+)\)\=:', '', '')
+endfunction
+
+let s:err = {}
+let s:errmsg = ''
+function! mark#errGet( ... )
+    return (a:0 ? get(s:err, a:1, '') : s:errmsg)
+endfunction
+function! mark#errClear( ... )
+    if a:0
+	let s:err[a:1] = ''
+    else
+	let s:errmsg = ''
+    endif
+endfunction
+function! mark#errSet( errmsg, ... )
+    if a:0
+	let s:err[a:1] = a:errmsg
+    else
+	let s:errmsg = a:errmsg
+    endif
+endfunction
+function! mark#errSetVimException( ... )
+    call call('mark#errSet', [mark#MsgFromVimException()] + a:000)
+endfunction
+
+function! mark#TopLevelBranches( pattern )
+    let l:rawBranches = split(a:pattern, '\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\\|', 1)
+    let l:openGroupCnt = 0
+    let l:branches = []
+    let l:currentBranch = ''
+    while ! empty(l:rawBranches)
+	let l:currentBranch = remove(l:rawBranches, 0)
+	let l:currentOpenGroupCnt = l:openGroupCnt
+	let l:count = 1
+	while 1
+	    let l:match = matchstr(l:currentBranch, '\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\\\%(%\?(\|)\)', 0, l:count)
+	    if empty(l:match)
+		break
+	    elseif l:match == '\)'
+		let l:openGroupCnt = max([0, l:openGroupCnt - 1])
+	    else
+		let l:openGroupCnt += 1
+	    endif
+	    let l:count += 1
+	endwhile
+	if l:currentOpenGroupCnt == 0
+	    call add(l:branches, l:currentBranch)
+	else
+	    if empty(l:branches)
+		let l:branches = ['']
+	    endif
+	    let l:branches[-1] .= '\|' . l:currentBranch
+	endif
+    endwhile
+    return l:branches
+endfunction
+
+function! mark#MakeWholeWordSearch( text, ... )
+let l:pattern = (a:0 ? a:1 : a:text)
+    if a:text =~# '^\k'
+	let l:pattern = '\<' . l:pattern
+    endif
+    if a:text =~# '\k$'
+	let l:pattern .= '\>'
+    endif
+    return l:pattern
+endfunction
+function! mark#FromLiteralText( text, isWholeWordSearch, additionalEscapeCharacters )
+    if a:isWholeWordSearch
+	return mark#MakeWholeWordSearch(a:text, substitute(escape(a:text, '\' . ['^$', '^$.*[~'][&magic] . a:additionalEscapeCharacters), "\n", '\\n', 'g'))
+    else
+	return substitute(escape(a:text, '\' . ['^$', '^$.*[~'][&magic] . a:additionalEscapeCharacters), "\n", '\\n', 'g')
+    endif
+endfunction
+function! mark#ParseUnescapedWithLiteralWholeWord( arguments, ... )
+    let l:match = call('s:Parse', [a:arguments] + a:000)
+    if empty(l:match)
+	let l:unescapedPattern = mark#FromLiteralText(a:arguments, 1, '')
+	return (a:0 ? [l:unescapedPattern] + repeat([''], a:0 >= 2 ? a:2 : 1) : l:unescapedPattern)
+    else
+	let l:unescapedPattern = substitute(l:match[2], '\C\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\\\ze[' . escape(l:match[1], ']^\-') . ']', '', 'g')
+	return (a:0 ? [l:unescapedPattern] + l:match[3: (a:0 >= 2 ? a:2 + 2 : 3)] : l:unescapedPattern)
+    endif
+endfunction
 
 "- functions ------------------------------------------------------------------
 
@@ -101,7 +201,7 @@ function! mark#MarkRegex( groupNum, regexpPreset )
 		echohl None
 	call inputrestore()
 	if empty(l:regexp)
-		call ingo#err#Clear()
+		call mark#errClear()
 		return 0
 	endif
 
@@ -346,20 +446,20 @@ function! s:EchoMarksDisabled()
 endfunction
 
 function! s:SplitIntoAlternatives( pattern )
-	return ingo#regexp#split#TopLevelBranches(a:pattern)
+	return mark#TopLevelBranches(a:pattern)
 endfunction
 
 " Return [success, markGroupNum]. success is true when the mark has been set or
 " cleared. markGroupNum is the mark group number where the mark was set. It is 0
 " if the group was cleared.
 function! mark#DoMark( groupNum, ... )
-	call ingo#err#Clear()
+	call mark#errClear()
 	if s:markNum <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again.
 		call mark#Init()
 		if s:markNum <= 0
 			" Still no mark highlightings; complain.
-			call ingo#err#Set('No mark highlightings defined')
+			call mark#errSet('No mark highlightings defined')
 			return [0, 0]
 		endif
 	endif
@@ -379,7 +479,7 @@ function! mark#DoMark( groupNum, ... )
 			if a:0
 				" :Mark // looks more like a typo than a command to disable all
 				" marks; prevent that, and only accept :Mark for it.
-				call ingo#err#Set('Do not pass empty pattern to disable all marks')
+				call mark#errSet('Do not pass empty pattern to disable all marks')
 				return [0, 0]
 			endif
 
@@ -468,7 +568,7 @@ function! s:IsRegexpValid( expr )
 		call match('', a:expr)
 		return 1
 	catch /^Vim\%((\a\+)\)\=:/
-		call ingo#err#SetVimException()
+		call mark#errSetVimException()
 		return 0
 	endtry
 endfunction
@@ -490,11 +590,11 @@ function! mark#SetMark( groupNum, ... )
 	" exist (interactivity in Ex commands is unexpected). Instead, return an
 	" error.
 	if s:markNum > 0 && a:groupNum > s:markNum
-		call ingo#err#Set(printf('Only %d mark highlight groups', s:markNum))
+		call mark#errSet(printf('Only %d mark highlight groups', s:markNum))
 		return 0
 	endif
 	if a:0
-		let [l:pattern, l:nameArgument] = ingo#cmdargs#pattern#ParseUnescapedWithLiteralWholeWord(a:1, '\(\s\+as\%(\s\+\(.\{-}\)\)\?\)\?\s*')
+		let [l:pattern, l:nameArgument] = mark#ParseUnescapedWithLiteralWholeWord(a:1, '\(\s\+as\%(\s\+\(.\{-}\)\)\?\)\?\s*')
 		if ! empty(l:nameArgument)
 			let l:name = substitute(l:nameArgument, '^\s\+as\s*', '', '')
 			return mark#DoMarkAndSetCurrent(a:groupNum, l:pattern, l:name)
@@ -561,7 +661,7 @@ function! mark#SearchCurrentMark( isBackward )
 endfunction
 
 function! mark#SearchGroupMark( groupNum, count, isBackward, isSetLastSearch )
-	call ingo#err#Clear()
+	call mark#errClear()
 	if a:groupNum == 0
 		" No mark group number specified; use last search, and fall back to
 		" current mark if possible.
@@ -613,7 +713,7 @@ function! mark#SearchNextGroup( count, isBackward )
 
 	let l:groupIndex = mark#NextUsedGroupIndex(a:isBackward, 1, l:groupIndex, a:count)
 	if l:groupIndex == -1
-		call ingo#err#Set(printf('No %s mark group%s used', (a:count == 1 ? '' : a:count . ' ') . (a:isBackward ? 'previous' : 'next'), (a:count == 1 ? '' : 's')))
+		call mark#errSet(printf('No %s mark group%s used', (a:count == 1 ? '' : a:count . ' ') . (a:isBackward ? 'previous' : 'next'), (a:count == 1 ? '' : 's')))
 		return 0
 	endif
 	return mark#SearchGroupMark(l:groupIndex + 1, 1, a:isBackward, 1)
@@ -621,7 +721,7 @@ endfunction
 
 
 function! mark#NoMarkErrorMessage()
-	call ingo#err#Set('No marks defined')
+	call mark#errSet('No marks defined')
 endfunction
 function! s:ErrorMessage( searchType, searchPattern, isBackward )
 	if &wrapscan
@@ -629,7 +729,7 @@ function! s:ErrorMessage( searchType, searchPattern, isBackward )
 	else
 		let l:errmsg = printf('%s search hit %s without match for: %s', a:searchType, (a:isBackward ? 'TOP' : 'BOTTOM'), a:searchPattern)
 	endif
-	call ingo#err#Set(l:errmsg)
+	call mark#errSet(l:errmsg)
 endfunction
 
 " Wrapper around search() with additonal search and error messages and "wrapscan" warning.
@@ -848,7 +948,7 @@ function! mark#LoadCommand( isShowMessages, ... )
 			let l:marks = eval(l:marksVariable)
 			let l:isEnabled = 1
 		else
-			call ingo#err#Set('No marks stored under ' . l:marksVariable . (s:HasVariablePersistence() || a:1 !~# '^\u\+$' ? '' : ", and persistence not configured via ! flag in 'viminfo'"))
+			call mark#errSet('No marks stored under ' . l:marksVariable . (s:HasVariablePersistence() || a:1 !~# '^\u\+$' ? '' : ", and persistence not configured via ! flag in 'viminfo'"))
 			return 0
 		endif
 	else
@@ -856,7 +956,7 @@ function! mark#LoadCommand( isShowMessages, ... )
 			let l:marks = g:MARK_MARKS
 			let l:isEnabled = (exists('g:MARK_ENABLED') ? g:MARK_ENABLED : 1)
 		else
-			call ingo#err#Set('No persistent marks found' . (s:HasVariablePersistence() ? '' : ", and persistence not configured via ! flag in 'viminfo'"))
+			call mark#errSet('No persistent marks found' . (s:HasVariablePersistence() ? '' : ", and persistence not configured via ! flag in 'viminfo'"))
 			return 0
 		endif
 	endif
@@ -875,10 +975,10 @@ function! mark#LoadCommand( isShowMessages, ... )
 		return 1
 	catch /^Vim\%((\a\+)\)\=:/
 		if exists('l:marksVariable')
-			call ingo#err#Set(printf('Corrupted persistent mark info in %s', l:marksVariable))
+			call mark#errSet(printf('Corrupted persistent mark info in %s', l:marksVariable))
 			execute 'unlet!' l:marksVariable
 		else
-			call ingo#err#Set('Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED')
+			call mark#errSet('Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED')
 			unlet! g:MARK_MARKS
 			unlet! g:MARK_ENABLED
 		endif
@@ -898,7 +998,7 @@ function! s:SavePattern( ... )
 				let g:MARK_{a:1} = string(l:savedMarks)
 			endif
 		catch /^Vim\%((\a\+)\)\=:/
-			call ingo#err#SetVimException()
+			call mark#errSetVimException()
 			return 0
 		endtry
 	else
@@ -910,16 +1010,16 @@ endfunction
 function! mark#SaveCommand( ... )
 	if ! s:HasVariablePersistence()
 		if ! a:0
-			call ingo#err#Set("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
+			call mark#errSet("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
 			return 0
 		elseif a:1 =~# '^\u\+$'
-			call ingo#msg#WarningMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
+			call mark#WarningMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
 		endif
 	endif
 
 	let l:result = call('s:SavePattern', a:000)
 	if l:result == 2
-		call ingo#msg#WarningMsg('No marks defined')
+		call mark#WarningMsg('No marks defined')
 	endif
 	return l:result
 endfunction
@@ -952,12 +1052,12 @@ endfunction
 function! mark#SetName( isClearAll, groupNum, name )
 	if a:isClearAll
 		if a:groupNum != 0
-			call ingo#err#Set('Use either [!] to clear all names, or [N] to name a single group, but not both.')
+			call mark#errSet('Use either [!] to clear all names, or [N] to name a single group, but not both.')
 			return 0
 		endif
 		let s:names = repeat([''], s:markNum)
 	elseif a:groupNum > s:markNum
-		call ingo#err#Set(printf('Only %d mark highlight groups', s:markNum))
+		call mark#errSet(printf('Only %d mark highlight groups', s:markNum))
 		return 0
 	else
 		let s:names[a:groupNum - 1] = a:name

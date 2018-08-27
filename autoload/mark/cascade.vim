@@ -2,8 +2,6 @@
 "
 " DEPENDENCIES:
 "	- mark.vim autoload script
-"	- ingo/err.vim autoload script
-"	- ingo/msg.vim autoload script
 "
 " Copyright: (C) 2015-2018 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
@@ -51,7 +49,7 @@ function! mark#cascade#Next( count, isStopBeforeCascade, isBackward )
 	endif
 
 	if s:cascadingGroupIndex == -1
-		call ingo#err#Set('No cascaded search defined')
+		call mark#errSet('No cascaded search defined')
 		return 0
 	elseif get(s:cascadingVisitedBuffers, bufnr(''), -1) == s:cascadingGroupIndex && s:cascadingLocation != s:GetLocation()
 		" We've returned to a buffer that had previously already been searched
@@ -119,7 +117,7 @@ function! s:Cascade( count, isStopBeforeCascade, isBackward )
 	let l:nextGroupIndex = mark#NextUsedGroupIndex(a:isBackward, 0, s:cascadingGroupIndex, 1)
 	if l:nextGroupIndex == -1
 		redraw  " Get rid of the previous mark search message.
-		call ingo#err#Set(printf('Cascaded search ended with %s used group', (a:isBackward ? 'first' : 'last')))
+		call mark#errSet(printf('Cascaded search ended with %s used group', (a:isBackward ? 'first' : 'last')))
 		return 0
 	endif
 
@@ -127,7 +125,7 @@ function! s:Cascade( count, isStopBeforeCascade, isBackward )
 	if a:isStopBeforeCascade
 		let s:cascadingStop = l:nextGroupIndex
 		redraw  " Get rid of the previous mark search message.
-		call ingo#msg#WarningMsg('Cascaded search reached last match of current group')
+		call mark#WarningMsg('Cascaded search reached last match of current group')
 		return 1
 	else
 		call s:SwitchToNextGroup(l:nextGroupIndex, a:isBackward)

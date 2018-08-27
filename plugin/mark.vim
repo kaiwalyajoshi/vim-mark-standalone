@@ -14,8 +14,6 @@
 "	- mark.vim autoload script
 "	- mark/palettes.vim autoload script for additional palettes
 "	- mark/cascade.vim autoload script for cascading search
-"	- ingo/err.vim autoload script
-"	- ingo/msg.vim autoload script
 "
 " Version:     3.0.0
 
@@ -77,7 +75,7 @@ function! s:GetPalette()
 	endif
 	if ! has_key(g:mwPalettes, g:mwDefaultHighlightingPalette)
 		if ! empty(g:mwDefaultHighlightingPalette)
-			call ingo#msg#WarningMsg('Mark: Unknown value for g:mwDefaultHighlightingPalette: ' . g:mwDefaultHighlightingPalette)
+			call mark#WarningMsg('Mark: Unknown value for g:mwDefaultHighlightingPalette: ' . g:mwDefaultHighlightingPalette)
 		endif
 
 		return []
@@ -88,7 +86,7 @@ function! s:GetPalette()
 	elseif type(g:mwPalettes[g:mwDefaultHighlightingPalette]) == type(function('tr'))
 		return call(g:mwPalettes[g:mwDefaultHighlightingPalette], [])
 	else
-		call ingo#msg#ErrorMsg(printf('Mark: Invalid value type for g:mwPalettes[%s]', g:mwDefaultHighlightingPalette))
+		call mark#ErrorMsg(printf('Mark: Invalid value type for g:mwPalettes[%s]', g:mwDefaultHighlightingPalette))
 		return []
 	endif
 endfunction
@@ -115,17 +113,17 @@ highlight def link SearchSpecialSearchType MoreMsg
 nnoremap <silent> <Plug>MarkSet               :<C-u>if ! mark#MarkCurrentWord(v:count)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 vnoremap <silent> <Plug>MarkSet               :<C-u>if ! mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 vnoremap <silent> <Plug>MarkIWhiteSet         :<C-u>if ! mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralWhitespaceIndifferentPattern())[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count, '')<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-vnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count, mark#GetVisualSelectionAsRegexp())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkClear             :<C-u>if ! mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count, '')<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
+vnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count, mark#GetVisualSelectionAsRegexp())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkClear             :<C-u>if ! mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkAllClear          :<C-u>call mark#ClearAll()<CR>
 nnoremap <silent> <Plug>MarkConfirmAllClear   :<C-u>if confirm('Really delete all marks? This cannot be undone.', "&Yes\n&No") == 1<Bar>call mark#ClearAll()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkToggle            :<C-u>call mark#Toggle()<CR>
 
-nnoremap <silent> <Plug>MarkSearchCurrentNext :<C-u>if ! mark#SearchCurrentMark(0)<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchCurrentPrev :<C-u>if ! mark#SearchCurrentMark(1)<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchAnyNext     :<C-u>if ! mark#SearchAnyMark(0)<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchAnyPrev     :<C-u>if ! mark#SearchAnyMark(1)<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchCurrentNext :<C-u>if ! mark#SearchCurrentMark(0)<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchCurrentPrev :<C-u>if ! mark#SearchCurrentMark(1)<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchAnyNext     :<C-u>if ! mark#SearchAnyMark(0)<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchAnyPrev     :<C-u>if ! mark#SearchAnyMark(1)<Bar>echoerr mark#errGet()<Bar>endif<CR>
 " When typed, [*#nN] open the fold at the search result, but inside a mapping or
 " :normal this must be done explicitly via 'zv'.
 nnoremap <silent> <Plug>MarkSearchNext          :<C-u>if ! mark#SearchNext(0)<Bar>execute 'normal! *zv'<Bar>endif<CR>
@@ -134,16 +132,16 @@ nnoremap <silent> <Plug>MarkSearchOrCurNext     :<C-u>if ! mark#SearchNext(0,'ma
 nnoremap <silent> <Plug>MarkSearchOrCurPrev     :<C-u>if ! mark#SearchNext(1,'mark#SearchCurrentMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchOrAnyNext     :<C-u>if ! mark#SearchNext(0,'mark#SearchAnyMark')<Bar>execute 'normal! *zv'<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchOrAnyPrev     :<C-u>if ! mark#SearchNext(1,'mark#SearchAnyMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchGroupNext     :<C-u>if ! mark#SearchGroupMark(v:count, 1, 0, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchGroupPrev     :<C-u>if ! mark#SearchGroupMark(v:count, 1, 1, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchUsedGroupNext	:<C-u>if ! mark#SearchNextGroup(v:count1, 0)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchUsedGroupPrev	:<C-u>if ! mark#SearchNextGroup(v:count1, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchCascadeStartWithStop  :<C-u>if ! mark#cascade#Start(v:count, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"   <Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchCascadeNextWithStop   :<C-u>if ! mark#cascade#Next(v:count1, 1, 0)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchCascadePrevWithStop   :<C-u>if ! mark#cascade#Next(v:count1, 1, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchCascadeStartNoStop    :<C-u>if ! mark#cascade#Start(v:count, 0)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"   <Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchCascadeNextNoStop     :<C-u>if ! mark#cascade#Next(v:count1, 0, 0)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchCascadePrevNoStop     :<C-u>if ! mark#cascade#Next(v:count1, 0, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchGroupNext     :<C-u>if ! mark#SearchGroupMark(v:count, 1, 0, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchGroupPrev     :<C-u>if ! mark#SearchGroupMark(v:count, 1, 1, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchUsedGroupNext	:<C-u>if ! mark#SearchNextGroup(v:count1, 0)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchUsedGroupPrev	:<C-u>if ! mark#SearchNextGroup(v:count1, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeStartWithStop  :<C-u>if ! mark#cascade#Start(v:count, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"   <Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeNextWithStop   :<C-u>if ! mark#cascade#Next(v:count1, 1, 0)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchCascadePrevWithStop   :<C-u>if ! mark#cascade#Next(v:count1, 1, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeStartNoStop    :<C-u>if ! mark#cascade#Start(v:count, 0)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"   <Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeNextNoStop     :<C-u>if ! mark#cascade#Next(v:count1, 0, 0)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchCascadePrevNoStop     :<C-u>if ! mark#cascade#Next(v:count1, 0, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>
 
 
 if !hasmapto('<Plug>MarkSet', 'n')
@@ -197,7 +195,7 @@ function! s:MakeDirectGroupMappings()
 	for l:cnt in range(1, g:mwDirectGroupJumpMappingNum)
 		for [l:isBackward, l:direction, l:keyModifier] in [[0, 'Next', ''], [1, 'Prev', 'C-']]
 			let l:plugMappingName = printf('<Plug>MarkSearchGroup%d%s', l:cnt, l:direction)
-			execute printf('nnoremap <silent> %s :<C-u>if ! mark#SearchGroupMark(%d, v:count1, %d, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>', l:plugMappingName, l:cnt, l:isBackward)
+			execute printf('nnoremap <silent> %s :<C-u>if ! mark#SearchGroupMark(%d, v:count1, %d, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr mark#errGet()<Bar>endif<CR>', l:plugMappingName, l:cnt, l:isBackward)
 			if ! hasmapto(l:plugMappingName, 'n')
 				execute printf('nmap <%sk%d> %s', l:keyModifier, l:cnt, l:plugMappingName)
 			endif
@@ -211,12 +209,12 @@ delfunction s:MakeDirectGroupMappings
 
 "- commands -------------------------------------------------------------------
 
-command! -bang -range=0 -nargs=? -complete=customlist,mark#Complete Mark if <bang>0 | silent call mark#DoMark(<count>, '') | endif | if ! mark#SetMark(<count>, <f-args>)[0] | echoerr ingo#err#Get() | endif
+command! -bang -range=0 -nargs=? -complete=customlist,mark#Complete Mark if <bang>0 | silent call mark#DoMark(<count>, '') | endif | if ! mark#SetMark(<count>, <f-args>)[0] | echoerr mark#errGet() | endif
 command! -bar MarkClear call mark#ClearAll()
 command! -bar Marks call mark#List()
 
-command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkLoad if ! mark#LoadCommand(1, <f-args>) | echoerr ingo#err#Get() | endif
-command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkSave if ! mark#SaveCommand(<f-args>) | echoerr ingo#err#Get() | endif
+command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkLoad if ! mark#LoadCommand(1, <f-args>) | echoerr mark#errGet() | endif
+command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkSave if ! mark#SaveCommand(<f-args>) | echoerr mark#errGet() | endif
 command! -bar -register MarkYankDefinitions         if ! mark#YankDefinitions(0, <q-reg>) | echoerr 'No marks defined' | endif
 command! -bar -register MarkYankDefinitionsOneLiner if ! mark#YankDefinitions(1, <q-reg>) | echoerr 'No marks defined' | endif
 function! s:SetPalette( paletteName )
@@ -239,7 +237,7 @@ function! s:MarkPaletteComplete( ArgLead, CmdLine, CursorPos )
 	return sort(filter(keys(g:mwPalettes), 'v:val =~ ''\V\^'' . escape(a:ArgLead, "\\")'))
 endfunction
 command! -bar -nargs=1 -complete=customlist,<SID>MarkPaletteComplete MarkPalette call <SID>SetPalette(<q-args>)
-command! -bar -bang -range=0 -nargs=? MarkName if ! mark#SetName(<bang>0, <count>, <q-args>) | echoerr ingo#err#Get() | endif
+command! -bar -bang -range=0 -nargs=? MarkName if ! mark#SetName(<bang>0, <count>, <q-args>) | echoerr mark#errGet() | endif
 
 
 
