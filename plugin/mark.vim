@@ -164,12 +164,12 @@ endif
 " No default mapping for <Plug>MarkConfirmAllClear.
 " No default mapping for <Plug>MarkToggle.
 
-if !hasmapto('<Plug>MarkSearchCurrentNext', 'n')
-	nmap <unique> <Leader>* <Plug>MarkSearchCurrentNext
-endif
-if !hasmapto('<Plug>MarkSearchCurrentPrev', 'n')
-	nmap <unique> <Leader># <Plug>MarkSearchCurrentPrev
-endif
+" if !hasmapto('<Plug>MarkSearchCurrentNext', 'n')
+"     nmap <unique> <Leader>* <Plug>MarkSearchCurrentNext
+" endif
+" if !hasmapto('<Plug>MarkSearchCurrentPrev', 'n')
+"     nmap <unique> <Leader># <Plug>MarkSearchCurrentPrev
+" endif
 if !hasmapto('<Plug>MarkSearchAnyNext', 'n')
 	nmap <unique> <Leader>/ <Plug>MarkSearchAnyNext
 endif
